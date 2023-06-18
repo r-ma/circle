@@ -1,9 +1,190 @@
         extern sqrt_c
         extern debug
+        extern udebug
 
 	section .text
         global  circle_asm
+        global  circle_asm2
 	global	draw_pixel
+
+;-----------------------------------------------------------------------------
+; Draw circle using Bresenham's line algorithm
+; https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+; Arguments:
+;   rdi - buffer
+;   rsi - width
+;   rdx - heigth
+;   rcx - xc
+;   r8  - yc
+;   r9  - radius
+;   [rsp+16] - color
+circle_asm2:
+; save registers
+	push 	rbp
+	mov	rbp,rsp
+	push	rbx
+	push	r10
+	push	r11
+	push	r12
+	push	r13			
+	push	r14
+	push	r15
+
+	mov	r14, rcx		; r14 keeps xc
+	mov	r15, r8			; r15 keeps yx
+
+
+; initialization
+	mov 	r10, 0			; x
+	mov	r11, r9			; y
+
+; initial delta value calculation
+	mov	rax, r9
+	add	rax, rax
+	mov	r12, rax
+	mov	rax, 1
+	sub	rax, r12
+	mov	r12, rax		; delta
+	mov	r13, 0			; error
+	
+	mov	r9,[rsp+16] 		; 7th argument
+loop:
+
+; we need to fill the following registers
+;   rcx - x
+;   r8  - y
+;   r9  - color
+
+; pixel_1
+	mov	rcx, r14	
+	add	rcx, r10	; xc + x
+	mov	r8,  r15
+	add	r8,  r11	; yx + y
+	call	draw_pixel
+
+; pixel_2
+	mov	rcx, r14	
+	add	rcx, r10	; xc + x
+	mov	r8,  r15
+	sub	r8,  r11	; yx - y
+	call	draw_pixel
+
+; pixel_3
+	mov	rcx, r14	
+	sub	rcx, r10	; xc - x
+	mov	r8,  r15
+	add	r8,  r11	; yx + y
+	call	draw_pixel
+
+; pixel_4
+	mov	rcx, r14	
+	sub	rcx, r10	; xc - x
+	mov	r8,  r15
+	sub	r8,  r11	; yx - y
+	call	draw_pixel
+
+; pixel_5
+	mov	rcx, r14
+	add	rcx, r11	; xc + y
+	mov	r8,  r15
+	add	r8,  r10	; yx + x
+	call	draw_pixel
+
+; pixel_6
+	mov	rcx, r14	
+	add	rcx, r11	; xc + y
+	mov	r8,  r15
+	sub	r8,  r10	; yx - x
+	call	draw_pixel
+
+; pixel_7
+	mov	rcx, r14	
+	sub	rcx, r11	; xc - y
+	mov	r8,  r15
+	add	r8,  r10	; yx + x
+	call	draw_pixel
+
+; pixel_8
+	mov	rcx, r14	
+	sub	rcx, r11	; xc - y
+	mov	r8,  r15
+	sub	r8,  r10	; yx - x
+	call	draw_pixel
+
+; error := 2 * (delta + y) - 1
+	mov	rax, r12
+	add	rax, r11
+	add	rax, rax
+	dec	rax
+	mov	r13, rax
+
+; if ((delta < 0) && (error <= 0))
+
+	cmp	r12, 0
+	jnl	next1
+
+	cmp	r13, 0
+	jnle	next1
+
+;    delta += 2 * ++x + 1
+	inc	r10		; ++x
+	mov	rax, r10
+	add	rax, rax	; 2 * ++x
+	inc	rax		; 2 * ++x + 1
+	add	r12, rax	; delta += 2 * ++x + 1
+	
+;    continue
+	jmp 	loop
+	
+next1:
+
+; if ((delta > 0) && (error > 0))
+	cmp	r12, 0
+	jng	next2		; delta <= 0
+
+	cmp	r13, 0
+	jng	next2		; error <= 0
+
+
+;      delta -= 2 * --y + 1
+	dec	r11		; --y
+	mov	rax, r11
+	add	rax, rax	; 2 * --y
+	inc	rax		; 2 * --y + 1
+	sub	r12, rax	; delta -= 2 * --y + 1
+
+;      continue
+	jmp 	loop
+	
+next2:
+; delta += 2 * (++x - --y)
+	inc	r10		; ++x
+	dec	r11		; --y
+	mov	rax, r10
+	sub	rax, r11	; (++x - --y)
+	add	rax, rax
+	add	r12, rax
+
+	
+; check if y >= x
+	cmp	r10, r11
+	jng	loop
+	
+	
+	
+
+; restore registers and return
+	pop	r15
+	pop	r14
+	pop	r13
+	pop	r12
+	pop	r11
+	pop	r10
+	pop	rbx	
+	pop	rbp
+	ret
+
+
 
 ;-----------------------------------------------------------------------------
 ; Draw circle
@@ -38,8 +219,8 @@ circle_asm:
 	push	r14
 	push	r15
 
-	mov	r14, rcx
-	mov	r15, r8
+	mov	r14, rcx		; r14 keeps xc
+	mov	r15, r8			; r15 keeps yx
 
 
 	mov	rax, r9			; rax = radius	
@@ -48,15 +229,11 @@ circle_asm:
 	mov	r12, r9			; r12 = x = radius
 l:
 	mov	rax, r12
-	call	print_rax		; print x
 
 	mul	rax			; rax = x * x
-	call	print_rax		; print x^2
 	mov	r13, rax
 	mov	rax, rbx
-	call	print_rax		; print radius^2
 	sub	rax, r13		; rax = radius*radius - x*x
-	call	print_rax		; print radius*radius - x*x
 
 ; call external sqrt
 	push	rdi
@@ -64,7 +241,6 @@ l:
 	call	sqrt
 	pop	rdi			
 ; here rax = sqrt(radius*radius - x*x)
-	call	print_rax
 	mov	r11, rax		; save y to r11
 
 
@@ -92,10 +268,6 @@ l:
 	add	r8, r11			; r8 = y
 	call	draw_pixel
 
-
-; print end of cycle
-	mov	rax,9999
-	call	print_rax
 
 ; increment x
 	sub	r12,1
@@ -153,12 +325,16 @@ print_rax:
 	push	rcx
 	push	r8
 	push	r9
+	push	r10
+	push	r11
 	push	rax
 
 	mov	rdi, rax
 	call	debug
 
 	pop	rax
+	pop	r11
+	pop	r10
 	pop	r9
 	pop	r8
 	pop	rcx

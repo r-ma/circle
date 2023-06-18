@@ -7,6 +7,8 @@
 
 int circle_asm(void *image, int width, int height, int xc, int yc,
             int radius, unsigned int color);
+int circle_asm2(void *image, int width, int height, int xc, int yc,
+            int radius, unsigned int color);
 
 void draw_pixel(void* image, int width, int height, int x, int y,  unsigned short color);
 
@@ -60,6 +62,7 @@ int circle_c2(void *image, int width, int height, int xc, int yc,
        if ((delta > 0) && (error > 0)) {
            delta -= 2 * --y + 1;
            continue;
+	   break;
        }
        delta += 2 * (++x - --y);
    }
@@ -69,9 +72,13 @@ void debug(unsigned long long i) {
 	printf("debug(%llu)\n",i);
 }
 
+void udebug(long long i) {
+	printf("debug(%lld)\n",i);
+}
+
 int sqrt_c(unsigned long long i) {
 	unsigned long long result = sqrt(i);
-	printf("sqrt_c(%llu) retruns %llu\n",i,result);
+//	printf("sqrt_c(%llu) retruns %llu\n",i,result);
 	return result;
 }
 
@@ -114,8 +121,8 @@ int main(int argc, char *argv[])
     int xc = width / 2;   // Współrzędna x środka okręgu
     int yc = height / 2;  // Współrzędna y środka okręgu
 
-    //circle_asm(image, width, height, xc, yc, radius, color);
-    circle_c2(image, width, height, xc, yc, radius, color);
+    circle_asm2(image, width, height, xc, yc, radius, color);
+    circle_c2(image, width, height, xc+20, yc+20, radius, color);
 
     FILE *output_file = fopen("output.bmp", "wb");
     if (output_file != NULL) {
