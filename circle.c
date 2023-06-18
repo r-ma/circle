@@ -37,6 +37,34 @@ int circle_c(void *image, int width, int height, int xc, int yc,
 	return 0;
 }
 
+int circle_c2(void *image, int width, int height, int xc, int yc,
+            int radius, unsigned int color) {
+   int x = 0;
+   int y = radius;
+   int delta = 1 - 2 * radius;
+   int error = 0;
+   while (y >= x) {
+       draw_pixel(image,width,height,xc + x, yc + y, color);
+       draw_pixel(image,width,height,xc + x, yc - y, color);
+       draw_pixel(image,width,height,xc - x, yc + y, color);
+       draw_pixel(image,width,height,xc - x, yc - y, color);
+       draw_pixel(image,width,height,xc + y, yc + x, color);
+       draw_pixel(image,width,height,xc + y, yc - x, color);
+       draw_pixel(image,width,height,xc - y, yc + x, color);
+       draw_pixel(image,width,height,xc - y, yc - x, color);
+       error = 2 * (delta + y) - 1;
+       if ((delta < 0) && (error <= 0)) {
+           delta += 2 * ++x + 1;
+           continue;
+       }
+       if ((delta > 0) && (error > 0)) {
+           delta -= 2 * --y + 1;
+           continue;
+       }
+       delta += 2 * (++x - --y);
+   }
+}
+
 void debug(unsigned long long i) {
 	printf("debug(%llu)\n",i);
 }
@@ -86,7 +114,8 @@ int main(int argc, char *argv[])
     int xc = width / 2;   // Współrzędna x środka okręgu
     int yc = height / 2;  // Współrzędna y środka okręgu
 
-    circle_asm(image, width, height, xc, yc, radius, color);
+    //circle_asm(image, width, height, xc, yc, radius, color);
+    circle_c2(image, width, height, xc, yc, radius, color);
 
     FILE *output_file = fopen("output.bmp", "wb");
     if (output_file != NULL) {
